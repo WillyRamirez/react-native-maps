@@ -52,13 +52,13 @@ RCT_EXPORT_MODULE()
 
     map.isAccessibilityElement = NO;
     map.accessibilityElementsHidden = NO;
-
+    
     // MKMapView doesn't report tap events, so we attach gesture recognizers to it
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapTap:)];
     UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapDoubleTap:)];
     [doubleTap setNumberOfTapsRequired:2];
     [tap requireGestureRecognizerToFail:doubleTap];
-
+    
     UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapLongPress:)];
     UIPanGestureRecognizer *drag = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleMapDrag:)];
     [drag setMinimumNumberOfTouches:1];
@@ -66,13 +66,13 @@ RCT_EXPORT_MODULE()
     tap.cancelsTouchesInView = NO;
     doubleTap.cancelsTouchesInView = NO;
     longPress.cancelsTouchesInView = NO;
-
+    
     doubleTap.delegate = self;
-
+    
     // disable drag by default
     drag.enabled = NO;
     drag.delegate = self;
-
+  
     [map addGestureRecognizer:tap];
     [map addGestureRecognizer:doubleTap];
     [map addGestureRecognizer:longPress];
@@ -129,18 +129,20 @@ RCT_CUSTOM_VIEW_PROPERTY(initialRegion, MKCoordinateRegion, AIRMap)
     if (json == nil) return;
 
     // don't emit region change events when we are setting the initialRegion
-    view.ignoreRegionChanges++;
+    BOOL originalIgnore = view.ignoreRegionChanges;
+    view.ignoreRegionChanges = YES;
     [view setInitialRegion:[RCTConvert MKCoordinateRegion:json]];
-    view.ignoreRegionChanges--;
+    view.ignoreRegionChanges = originalIgnore;
 }
 RCT_CUSTOM_VIEW_PROPERTY(initialCamera, MKMapCamera, AIRMap)
 {
     if (json == nil) return;
-
+    
     // don't emit region change events when we are setting the initialCamera
-    view.ignoreRegionChanges++;
+    BOOL originalIgnore = view.ignoreRegionChanges;
+    view.ignoreRegionChanges = YES;
     [view setInitialCamera:[RCTConvert MKMapCamera:json]];
-    view.ignoreRegionChanges--;
+    view.ignoreRegionChanges = originalIgnore;
 }
 
 
@@ -153,19 +155,21 @@ RCT_CUSTOM_VIEW_PROPERTY(region, MKCoordinateRegion, AIRMap)
     if (json == nil) return;
 
     // don't emit region change events when we are setting the region
-    view.ignoreRegionChanges++;
+    BOOL originalIgnore = view.ignoreRegionChanges;
+    view.ignoreRegionChanges = YES;
     [view setRegion:[RCTConvert MKCoordinateRegion:json] animated:NO];
-    view.ignoreRegionChanges--;
+    view.ignoreRegionChanges = originalIgnore;
 }
 
 RCT_CUSTOM_VIEW_PROPERTY(camera, MKMapCamera*, AIRMap)
 {
     if (json == nil) return;
-
+    
     // don't emit region change events when we are setting the camera
-    view.ignoreRegionChanges++;
+    BOOL originalIgnore = view.ignoreRegionChanges;
+    view.ignoreRegionChanges = YES;
     [view setCamera:[RCTConvert MKMapCamera:json] animated:NO];
-    view.ignoreRegionChanges--;
+    view.ignoreRegionChanges = originalIgnore;
 }
 
 
@@ -237,9 +241,10 @@ RCT_EXPORT_METHOD(setCamera:(nonnull NSNumber *)reactTag
             MKMapCamera *camera = [RCTConvert MKMapCameraWithDefaults:json existingCamera:[mapView camera]];
 
             // don't emit region change events when we are setting the camera
-            mapView.ignoreRegionChanges++;
+            BOOL originalIgnore = mapView.ignoreRegionChanges;
+            mapView.ignoreRegionChanges = YES;
             [mapView setCamera:camera animated:NO];
-            mapView.ignoreRegionChanges--;
+            mapView.ignoreRegionChanges = originalIgnore;
         }
     }];
 }
@@ -260,11 +265,12 @@ RCT_EXPORT_METHOD(animateCamera:(nonnull NSNumber *)reactTag
             MKMapCamera *camera = [RCTConvert MKMapCameraWithDefaults:json existingCamera:[mapView camera]];
 
             // don't emit region change events when we are setting the camera
-            mapView.ignoreRegionChanges++;
+            BOOL originalIgnore = mapView.ignoreRegionChanges;
+            mapView.ignoreRegionChanges = YES;
             [AIRMap animateWithDuration:duration/1000 animations:^{
                 [mapView setCamera:camera animated:YES];
             } completion:^(BOOL finished){
-                mapView.ignoreRegionChanges--;
+                mapView.ignoreRegionChanges = originalIgnore;
             }];
         }
     }];
@@ -543,16 +549,16 @@ RCT_EXPORT_METHOD(getAddressFromCoordinates:(nonnull NSNumber *)reactTag
                                   [overlay drawToSnapshot:snapshot context:UIGraphicsGetCurrentContext()];
                           }
                       }
-
+                      
                       for (id <MKAnnotation> annotation in mapView.annotations) {
                           CGPoint point = [snapshot pointForCoordinate:annotation.coordinate];
-
+                          
                           MKAnnotationView* anView = [mapView viewForAnnotation: annotation];
-
+                          
                           if (anView){
                               pin = anView;
                           }
-
+                          
                           if (CGRectContainsPoint(rect, point)) {
                               point.x = point.x + pin.centerOffset.x - (pin.bounds.size.width / 2.0f);
                               point.y = point.y + pin.centerOffset.y - (pin.bounds.size.height / 2.0f);
@@ -711,7 +717,7 @@ RCT_EXPORT_METHOD(getAddressFromCoordinates:(nonnull NSNumber *)reactTag
 - (void)handleMapDoubleTap:(UIPanGestureRecognizer*)recognizer {
     AIRMap *map = (AIRMap *)recognizer.view;
     if (!map.onDoublePress) return;
-
+    
     CGPoint touchPoint = [recognizer locationInView:map];
     CLLocationCoordinate2D coord = [map convertPoint:touchPoint toCoordinateFromView:map];
     map.onDoublePress(@{
@@ -724,7 +730,7 @@ RCT_EXPORT_METHOD(getAddressFromCoordinates:(nonnull NSNumber *)reactTag
                             @"y": @(touchPoint.y),
                             },
                     });
-
+    
 }
 
 
@@ -916,11 +922,11 @@ static int kDragCenterContext;
                          @"heading": @(location.location.course),
                          }
                  };
-
+    
     if (mapView.onUserLocationChange) {
         mapView.onUserLocationChange(event);
     }
-
+    
     if (mapView.followUserLocation) {
         MKCoordinateRegion region;
         region.span.latitudeDelta = AIRMapDefaultSpan;
@@ -931,7 +937,7 @@ static int kDragCenterContext;
         // Move to user location only for the first time it loads up.
         // mapView.followUserLocation = NO;
     }
-
+    
 }
 
 - (void)mapViewDidChangeVisibleRegion:(AIRMap *)mapView
@@ -1013,7 +1019,7 @@ static int kDragCenterContext;
 
 - (void)_emitRegionChangeEvent:(AIRMap *)mapView continuous:(BOOL)continuous
 {
-    if (mapView.ignoreRegionChanges == 0 && mapView.onChange) {
+    if (!mapView.ignoreRegionChanges && mapView.onChange) {
         MKCoordinateRegion region = mapView.region;
         if (!CLLocationCoordinate2DIsValid(region.center)) {
             return;
